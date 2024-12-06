@@ -1,17 +1,18 @@
 [package]
-name = "stylus-hello-world"
+name = "arbitrum_vault"
 version = "0.1.9"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/OffchainLabs/stylus-hello-world"
-repository = "https://github.com/OffchainLabs/stylus-hello-world"
+homepage = "https://github.com/xiaxianlin/arbitrum_vault"
+repository = "https://github.com/xiaxianlin/arbitrum_vault"
 keywords = ["arbitrum", "ethereum", "stylus", "alloy"]
-description = "Stylus hello world example"
+description = ""
 
 [dependencies]
 alloy-primitives = "=0.7.6"
 alloy-sol-types = "=0.7.6"
-mini-alloc = "0.4.2"
+alloy-sol-macro-expander = "=0.7.6"
+mini-alloc = "0.6.0"
 stylus-sdk = "0.6.0"
 hex = "0.4.3"
 dotenv = "0.15.0"
@@ -26,7 +27,7 @@ export-abi = ["stylus-sdk/export-abi"]
 debug = ["stylus-sdk/debug"]
 
 [[bin]]
-name = "stylus-hello-world"
+name = "arbitrum-vault"
 path = "src/main.rs"
 
 [lib]

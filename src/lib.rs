@@ -1,68 +1,85 @@
-//!
-//! Stylus Hello World
-//!
-//! The following contract implements the Counter example from Foundry.
-//!
-//! ```
-//! contract Counter {
-//!     uint256 public number;
-//!     function setNumber(uint256 newNumber) public {
-//!         number = newNumber;
-//!     }
-//!     function increment() public {
-//!         number++;
-//!     }
-//! }
-//! ```
-//!
-//! The program is ABI-equivalent with Solidity, which means you can call it from both Solidity and Rust.
-//! To do this, run `cargo stylus export-abi`.
-//!
-//! Note: this code is a template-only and has not been audited.
-//!
-
-// Allow `cargo stylus export-abi` to generate a main function.
-#![cfg_attr(not(feature = "export-abi"), no_main)]
+#![cfg_attr(not(feature = "export-abi"), no_main, no_std)]
 extern crate alloc;
 
-/// Import items from the SDK. The prelude contains common traits and macros.
-use stylus_sdk::{alloy_primitives::U256, prelude::*};
+mod erc20;
+use crate::erc20::{Erc20, Erc20Params};
+use alloc::vec::Vec;
+use stylus_sdk::{
+    alloy_primitives::{Address, U256},
+    call,
+    call::RawCall,
+    function_selector, msg,
+    prelude::*,
+};
 
-// Define some persistent storage using the Solidity ABI.
-// `Counter` will be the entrypoint.
+struct VaultParams;
+
+impl Erc20Params for VaultParams {
+    const NAME: &'static str = "Vault Example";
+    const SYMBOL: &'static str = "VAULT";
+    const DECIMALS: u8 = 18;
+}
+
 sol_storage! {
     #[entrypoint]
-    pub struct Counter {
-        uint256 number;
+    struct Vault {
+        address asset;
+        uint total_supply;
+        #[borrow]
+        Erc20<VaultParams> erc20;
     }
 }
 
-/// Declare that `Counter` is a contract with the following external methods.
 #[public]
-impl Counter {
-    /// Gets the number from storage.
-    pub fn number(&self) -> U256 {
-        self.number.get()
+#[inherit(Erc20<VaultParams>)]
+impl Vault {
+    pub fn set_asset(&mut self, _asset: Address) -> Result<Address, Vec<u8>> {
+        self.asset.set(_asset);
+        Ok(_asset)
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn set_number(&mut self, new_number: U256) {
-        self.number.set(new_number);
+    #[payable]
+    pub fn deposit(&mut self, amount: U256) -> Result<(), Vec<u8>> {
+        let selector = function_selector!("transferFrom(address,address,uint256)");
+        let data = [
+            &selector[..],
+            &msg::sender().into_array(),
+            &self.asset.get().into_array(),
+            &amount.to_be_bytes::<32>(),
+        ]
+        .concat();
+        RawCall::new().call(self.asset.get(), &data)?;
+        let supply = self.total_supply.get();
+        let shares = if supply == U256::ZERO {
+            amount
+        } else {
+            amount
+                .checked_div(self.total_assets()?)
+                .ok_or("Divide by zero")?
+        };
+        self.erc20.mint(msg::sender(), shares)?;
+        Ok(())
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn mul_number(&mut self, new_number: U256) {
-        self.number.set(new_number * self.number.get());
+    pub fn withdraw(&mut self, amount: U256) -> Result<(), Vec<u8>> {
+        let supply = self.total_supply.get();
+        let shares = if supply == U256::ZERO {
+            amount
+        } else {
+            amount
+                .checked_div(self.total_assets()?)
+                .ok_or("Divide by zero")?
+        };
+
+        self.erc20.burn(msg::sender(), shares)?;
+        call::transfer_eth(msg::sender(), amount)
     }
 
-    /// Sets a number in storage to a user-specified value.
-    pub fn add_number(&mut self, new_number: U256) {
-        self.number.set(new_number + self.number.get());
+    pub fn asset(&self) -> Result<Address, Vec<u8>> {
+        Ok(self.asset.get())
     }
 
-    /// Increments `number` and updates its value in storage.
-    pub fn increment(&mut self) {
-        let number = self.number.get();
-        self.set_number(number + U256::from(1));
+    pub fn total_assets(&self) -> Result<U256, Vec<u8>> {
+        Ok(self.total_supply.get())
     }
 }
