@@ -3,8 +3,8 @@ name = "arbitrum_vault"
 version = "0.1.9"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/xiaxianlin/arbitrum_vault"
-repository = "https://github.com/xiaxianlin/arbitrum_vault"
+homepage = "https://github.com/xiaxianlin/arbitrum-vault"
+repository = "https://github.com/xiaxianlin/arbitrum-vault"
 keywords = ["arbitrum", "ethereum", "stylus", "alloy"]
 description = ""
 
